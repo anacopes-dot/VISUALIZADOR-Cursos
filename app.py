@@ -8,13 +8,11 @@ st.set_page_config(page_title="Dashboard Docente Premium", layout="wide", initia
 # --- ESTILOS CSS PERSONALIZADOS PARA DISEÑO VISUAL INTERESANTE ---
 st.markdown("""
     <style>
-    /* Fondo general y fuentes */
     .main { background-color: #f8f9fa; }
     h1 { color: #1e3a8a; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; text-align: center; margin-bottom: 25px; }
     h3 { color: #2563eb; font-family: 'Helvetica Neue', sans-serif; font-weight: 700; margin-top: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
     h4 { color: #1e40af; font-weight: 600; margin-top: 15px; }
     
-    /* Tarjetas de Métricas Resaltadas (KPIs) */
     .kpi-container {
         background-color: #ffffff;
         border-radius: 12px;
@@ -29,7 +27,6 @@ st.markdown("""
     .kpi-value { font-size: 32px; font-weight: 800; color: #1e3a8a; margin-top: 5px; }
     .kpi-sub { font-size: 13px; color: #10b981; font-weight: 600; margin-top: 2px; }
     
-    /* Alertas de Ausentismo Estilizadas */
     .alerta-roja {
         background-color: #fef2f2;
         border-radius: 10px;
@@ -65,20 +62,31 @@ df_asistencia, df_inscripciones, df_escuelas = None, None, None
 
 # Lectura robusta tolerante a nombres de pestañas
 if file_as:
-    try: df_asistencia = pd.read_excel(file_as, sheet_name="Asistencias")
+    try:
+        df_asistencia = pd.read_excel(file_as, sheet_name="Asistencias")
     except:
-        try: df_asistencia = pd.read_excel(file_as, sheet_name=0)
-        except: pass
+        try:
+            df_asistencia = pd.read_excel(file_as, sheet_name=0)
+        except:
+            pass
+
 if file_ins:
-    try: df_inscripciones = pd.read_excel(file_ins, sheet_name="Inscriptos")
+    try:
+        df_inscripciones = pd.read_excel(file_ins, sheet_name="Inscriptos")
     except:
-        try: df_inscripciones = pd.read_excel(file_ins, sheet_name=0)
-        except: pass
+        try:
+            df_inscripciones = pd.read_excel(file_ins, sheet_name=0)
+        except:
+            pass
+
 if file_esc:
-    try: df_escuelas = pd.read_excel(file_esc, sheet_name="Escuelas")
+    try:
+        df_escuelas = pd.read_excel(file_esc, sheet_name="Escuelas")
     except:
-        try: df_escuelas = pd.read_excel(file_esc, sheet_name=0)
-        except: pass
+        try:
+            df_escuelas = pd.read_excel(file_esc, sheet_name=0)
+        except:
+            pass
 
 # --- FUNCIÓN DETECTOR INTELIGENTE DE COLUMNAS ---
 def mapear_columna(df_cols, posibles_nombres):
@@ -156,7 +164,6 @@ if df_asistencia is not None:
             
             st.write("### 📈 Curva y Porcentajes Reales de Presentismo")
             
-            # Bloque Resaltado de Inscritos
             st.markdown(f"""
                 <div class="kpi-container" style="border-left-color: #7c3aed; text-align: left; max-width: 400px; margin-bottom: 20px;">
                     <div class="kpi-title">📋 Población Total de Inscriptos</div>
@@ -165,7 +172,6 @@ if df_asistencia is not None:
                 </div>
             """, unsafe_allow_html=True)
             
-            # Gráfico de líneas temporales de asistencia diaria
             if col_fecha_as and col_esc_as and col_esc_ins:
                 registros_fecha = []
                 fechas_unicas = sorted(df_asistencia[col_fecha_as].unique())
@@ -182,7 +188,6 @@ if df_asistencia is not None:
                 
                 df_p_diario = pd.DataFrame(registros_fecha)
                 
-                # Gráfico interactivo moderno
                 fig_linea = px.line(df_p_diario, x='Fecha', y='% Asistencia', 
                                      title="📈 Evolución de Asistencia Diaria por Encuentro (Sobre Escuelas Convocadas)",
                                      text='% Asistencia', markers=True, template="plotly_white")
@@ -203,9 +208,9 @@ if df_asistencia is not None:
 
     # --- 3) SECCIÓN DE GRÁFICOS CREATIVOS E INTERACTIVOS ---
     st.write("### 🎨 Análisis Visual de Variables y Categorías")
-    
     v_col1, v_col2 = st.columns(2)
     
     with v_col1:
         if col_dep:
-
+            df_dep = df_asistencia.groupby(col_dep)[col_dni_as].nunique().reset_index(name='Docentes')
+            fig_dep = px.pie(df_dep, names=col_dep, values='Docentes', hole=0.4,
