@@ -2,190 +2,205 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Control de Presentismo Docente", layout="wide")
-st.title("📊 Panel de Presentismo: Asistencias, Inscriptos y Escuelas")
+# Configuración de página con diseño expandido y título profesional
+st.set_page_config(page_title="Dashboard Docente Premium", layout="wide", initial_sidebar_state="expanded")
 
-# --- BARRA LATERAL: CARGA DE LAS TRES HOJAS OFICIALES ---
-st.sidebar.header("📂 Carga de Hojas Oficiales")
+# --- ESTILOS CSS PERSONALIZADOS PARA DISEÑO VISUAL INTERESANTE ---
+st.markdown("""
+    <style>
+    /* Fondo general y fuentes */
+    .main { background-color: #f8f9fa; }
+    h1 { color: #1e3a8a; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; text-align: center; margin-bottom: 25px; }
+    h3 { color: #2563eb; font-family: 'Helvetica Neue', sans-serif; font-weight: 700; margin-top: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+    h4 { color: #1e40af; font-weight: 600; margin-top: 15px; }
+    
+    /* Tarjetas de Métricas Resaltadas (KPIs) */
+    .kpi-container {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 22px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+        border-left: 6px solid #2563eb;
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    .kpi-container:hover { transform: translateY(-3px); }
+    .kpi-title { font-size: 14px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { font-size: 32px; font-weight: 800; color: #1e3a8a; margin-top: 5px; }
+    .kpi-sub { font-size: 13px; color: #10b981; font-weight: 600; margin-top: 2px; }
+    
+    /* Alertas de Ausentismo Estilizadas */
+    .alerta-roja {
+        background-color: #fef2f2;
+        border-radius: 10px;
+        padding: 15px;
+        border-left: 5px solid #ef4444;
+        color: #991b1b;
+        font-weight: 500;
+        margin-bottom: 15px;
+    }
+    .alerta-verde {
+        background-color: #ecfdf5;
+        border-radius: 10px;
+        padding: 15px;
+        border-left: 5px solid #10b981;
+        color: #065f46;
+        font-weight: 500;
+        margin-bottom: 15px;
+    }
+    </style>
+""", unsafe_unsafe_with_html=True)
 
-# 1. HOJA: ASISTENCIAS
-st.sidebar.subheader("1. Hoja: Asistencias (Por Curso)")
-opcion_as = st.sidebar.radio("Origen de Asistencias:", ["Subir Excel (.xlsx)", "Link Google Sheets"], key="op_as")
-df_asistencia = None
+st.title("📊 Tablero Ejecutivo de Control y Presentismo Docente")
 
-if opcion_as == "Subir Excel (.xlsx)":
-    file_as = st.sidebar.file_uploader("Subir archivo de Asistencias", type=["xlsx"], key="file_as")
-    if file_as:
-        try:
-            df_asistencia = pd.read_excel(file_as)
-        except Exception as e:
-            st.sidebar.error(f"Error: {e}")
-else:
-    url_as = st.sidebar.text_input("Link Google Sheet de Asistencias:", key="url_as")
-    if url_as:
-        try:
-            url_csv = url_as.split("/edit?") + "/export?format=csv" if "edit?" in url_as else url_as
-            df_asistencia = pd.read_csv(url_csv)
-        except Exception as e:
-            st.sidebar.error(f"Error de enlace: {e}")
+# --- INSTANTE DE CARGA EN BARRA LATERAL ---
+st.sidebar.markdown("<h2 style='color:#1e3a8a; font-size:22px; font-weight:700;'>📂 Panel de Archivos</h2>", unsafe_allow_html=True)
 
-# 2. HOJA: INSCRIPTOS
-st.sidebar.write("---")
-st.sidebar.subheader("2. Hoja: Inscriptos (Total General)")
-opcion_ins = st.sidebar.radio("Origen de Inscriptos:", ["Subir Excel (.xlsx)", "Link Google Sheets"], key="op_ins")
-df_inscripciones = None
+file_as = st.sidebar.file_uploader("1. Archivo de Asistencias", type=["xlsx"], key="file_as")
+file_ins = st.sidebar.file_uploader("2. Archivo de Inscriptos (Opcional)", type=["xlsx"], key="file_ins")
+file_esc = st.sidebar.file_uploader("3. Archivo de Escuelas (Opcional)", type=["xlsx"], key="file_esc")
 
-if opcion_ins == "Subir Excel (.xlsx)":
-    file_ins = st.sidebar.file_uploader("Subir archivo de Inscriptos", type=["xlsx"], key="file_ins")
-    if file_ins:
-        try:
-            df_inscripciones = pd.read_excel(file_ins)
-        except Exception as e:
-            st.sidebar.error(f"Error: {e}")
-else:
-    url_ins = st.sidebar.text_input("Link Google Sheet de Inscriptos:", key="url_ins")
-    if url_ins:
-        try:
-            url_csv_ins = url_ins.split("/edit?") + "/export?format=csv" if "edit?" in url_ins else url_ins
-            df_inscripciones = pd.read_csv(url_csv_ins)
-        except Exception as e:
-            st.sidebar.error(f"Error de enlace: {e}")
+# Inicialización de variables
+df_asistencia, df_inscripciones, df_escuelas = None, None, None
 
-# 3. HOJA: ESCUELAS
-st.sidebar.write("---")
-st.sidebar.subheader("3. Hoja: Escuelas (Maestra)")
-opcion_esc = st.sidebar.radio("Origen de Escuelas:", ["Subir Excel (.xlsx)", "Link Google Sheets"], key="op_esc")
-df_escuelas = None
-
-if opcion_esc == "Subir Excel (.xlsx)":
-    file_esc = st.sidebar.file_uploader("Subir archivo de Escuelas", type=["xlsx"], key="file_esc")
-    if file_esc:
-        try:
-            df_escuelas = pd.read_excel(file_esc)
-        except Exception as e:
-            st.sidebar.error(f"Error: {e}")
-else:
-    url_esc = st.sidebar.text_input("Link Google Sheet de Escuelas:", key="url_esc")
-    if url_esc:
-        try:
-            url_csv_esc = url_esc.split("/edit?") + "/export?format=csv" if "edit?" in url_esc else url_esc
-            df_escuelas = pd.read_csv(url_csv_esc)
-        except Exception as e:
-            st.sidebar.error(f"Error de enlace: {e}")
+# Lectura robusta tolerante a nombres de pestañas
+if file_as:
+    try: df_asistencia = pd.read_excel(file_as, sheet_name="Asistencias")
+    except: df_asistencia = pd.read_excel(file_as, sheet_name=0)
+if file_ins:
+    try: df_inscripciones = pd.read_excel(file_ins, sheet_name="Inscriptos")
+    except: df_inscripciones = pd.read_excel(file_ins, sheet_name=0)
+if file_esc:
+    try: df_escuelas = pd.read_excel(file_esc, sheet_name="Escuelas")
+    except: df_escuelas = pd.read_excel(file_esc, sheet_name=0)
 
 # --- DETECTOR INTELIGENTE DE COLUMNAS ---
 def mapear_columna(df_cols, posibles_nombres):
     for nombre in posibles_nombres:
         for c in df_cols:
-            if c.lower().strip() == nombre.lower().strip():
+            if str(c).lower().strip() == nombre.lower().strip():
                 return c
     return None
 
-# --- ENTORNO DE PROCESAMIENTO ---
-if df_asistencia is not None or df_inscripciones is not None or df_escuelas is not None:
+# --- PROCESAMIENTO RECONSTRUCTIVO DEL DISEÑO VIBRANTE ---
+if df_asistencia is not None:
+    df_asistencia.columns = [str(c).strip() for c in df_asistencia.columns]
     
-    st.write("### 🔍 Estado de Carga de las Hojas")
-    c_check1, c_check2, c_check3 = st.columns(3)
-    with c_check1:
-        if df_asistencia is not None: st.success(f"✅ Hoja Asistencias cargada ({len(df_asistencia)} filas)")
-        else: st.warning("⏳ Esperando Hoja Asistencias...")
-    with c_check2:
-        if df_inscripciones is not None: st.success(f"✅ Hoja Inscriptos cargada ({len(df_inscripciones)} filas)")
-        else: st.warning("⏳ Esperando Hoja Inscriptos...")
-    with c_check3:
-        if df_escuelas is not None: st.success(f"✅ Hoja Escuelas cargada ({len(df_escuelas)} filas)")
-        else: st.warning("⏳ Esperando Hoja Escuelas...")
+    # Mapeo inteligente
+    col_dni_as = mapear_columna(df_asistencia.columns, ['DNI', 'Documento'])
+    col_fecha_as = mapear_columna(df_asistencia.columns, ['FECHA', 'Fecha'])
+    col_esc_as = mapear_columna(df_asistencia.columns, ['ESCUELA', 'Escuela'])
+    col_dep = mapear_columna(df_asistencia.columns, ['DEPENDENCIA', 'Dependencia', 'DEPENDENCIA FUNCIONAL'])
+    col_com = mapear_columna(df_asistencia.columns, ['COMUNA', 'Comuna'])
+    col_tur = mapear_columna(df_asistencia.columns, ['TURNO', 'Turno'])
+    col_cap = mapear_columna(df_asistencia.columns, ['CAPACITADOR', 'Capacitador'])
+    col_form = mapear_columna(df_asistencia.columns, ['Tipo de Formación', 'Formación', 'Tipo de Formacion'])
+    col_est = mapear_columna(df_asistencia.columns, ['Estado', 'ESTADO'])
 
-    # Si falta alguna hoja, mostrar ayuda visual interactiva para que el usuario sepa qué pasa
-    if df_asistencia is None or df_inscripciones is None or df_escuelas is None:
-        st.info("💡 **Nota:** Para ver los gráficos avanzados y los porcentajes de presentismo diario, recordá que debés cargar las **3 hojas juntas** en la barra lateral de la izquierda.")
+    if col_dni_as: df_asistencia[col_dni_as] = df_asistencia[col_dni_as].astype(str).str.strip()
+    if col_fecha_as: df_asistencia[col_fecha_as] = df_asistencia[col_fecha_as].astype(str).str.strip()
+
+    # Variables de base
+    docentes_activos_hoja = df_asistencia[col_dni_as].nunique() if col_dni_as else len(df_asistencia)
+    escuelas_hoja = df_asistencia[col_esc_as].nunique() if col_esc_as else 0
+    fechas_cant = df_asistencia[col_fecha_as].nunique() if col_fecha_as else 0
+
+    # --- DISEÑO INICIAL DE TARJETAS DE ALTO IMPACTO ---
+    st.write("### 📌 Indicadores de Convocatoria Actual")
+    
+    k_col1, k_col2, k_col3 = st.columns(3)
+    
+    with k_col1:
+        st.markdown(f"""
+            <div class="kpi-container" style="border-left-color: #2563eb;">
+                <div class="kpi-title">👤 Docentes Asistentes Únicos</div>
+                <div class="kpi-value">{docentes_activos_hoja:,}</div>
+                <div class="kpi-sub">En base a DNI limpios</div>
+            </div>
+        """, unsafe_allow_html=True)
         
-        # Mostrar vista previa de lo que haya cargado para asegurar que no esté roto
-        df_actual = df_asistencia if df_asistencia is not None else (df_inscripciones if df_inscripciones is not None else df_escuelas)
-        st.write("#### Vista previa del archivo cargado:")
-        st.dataframe(df_actual.head(5), use_container_width=True)
+    with k_col2:
+        st.markdown(f"""
+            <div class="kpi-container" style="border-left-color: #10b981;">
+                <div class="kpi-title">🏫 Escuelas con Presencia</div>
+                <div class="kpi-value">{escuelas_hoja}</div>
+                <div class="kpi-sub">Instituciones activas</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with k_col3:
+        st.markdown(f"""
+            <div class="kpi-container" style="border-left-color: #f59e0b;">
+                <div class="kpi-title">📅 Encuentros Auditados</div>
+                <div class="kpi-value">{fechas_cant}</div>
+                <div class="kpi-sub">Fechas con registros</div>
+            </div>
+        """, unsafe_allow_html=True)
 
-    else:
-        # --- PROCESAMIENTO COMPLETO CUANDO ESTÁN LAS 3 HOFAS ---
-        # Limpieza de nombres de columnas
-        df_asistencia.columns = [str(c).strip() for c in df_asistencia.columns]
+    # --- SECCIÓN PORCENTAJES DE PRESENTISMO AVANZADO ---
+    if df_inscripciones is not None:
         df_inscripciones.columns = [str(c).strip() for c in df_inscripciones.columns]
-        df_escuelas.columns = [str(c).strip() for c in df_escuelas.columns]
-
-        # Mapeo inteligente tolerante a errores
-        col_dni_as = mapear_columna(df_asistencia.columns, ['DNI', 'Documento'])
         col_dni_ins = mapear_columna(df_inscripciones.columns, ['DNI', 'Documento'])
-        col_fecha_as = mapear_columna(df_asistencia.columns, ['FECHA', 'Fecha'])
-        
-        col_esc_as = mapear_columna(df_asistencia.columns, ['ESCUELA', 'Escuela'])
         col_esc_ins = mapear_columna(df_inscripciones.columns, ['ESCUELA', 'Escuela'])
-        col_esc_mae = mapear_columna(df_escuelas.columns, ['ESCUELA', 'Escuela'])
         
-        col_dep = mapear_columna(df_asistencia.columns, ['DEPENDENCIA', 'Dependencia', 'DEPENDENCIA FUNCIONAL'])
-        col_com = mapear_columna(df_asistencia.columns, ['COMUNA', 'Comuna'])
-        col_tur = mapear_columna(df_asistencia.columns, ['TURNO', 'Turno'])
-        col_cap = mapear_columna(df_asistencia.columns, ['CAPACITADOR', 'Capacitador'])
-        col_form = mapear_columna(df_asistencia.columns, ['Tipo de Formación', 'Formación', 'Tipo de Formacion'])
-        col_est = mapear_columna(df_asistencia.columns, ['Estado', 'ESTADO'])
-
-        # Homologar tipos de datos
-        if col_dni_as: df_asistencia[col_dni_as] = df_asistencia[col_dni_as].astype(str).str.strip()
-        if col_dni_ins: df_inscripciones[col_dni_ins] = df_inscripciones[col_dni_ins].astype(str).str.strip()
-        if col_fecha_as: df_asistencia[col_fecha_as] = df_asistencia[col_fecha_as].astype(str).str.strip()
-
-        # --- 1) MÉTRICAS RESALTADAS (KPIs) ---
-        st.write("---")
-        st.write("### 📌 Estado General de Inscripción y Convocatoria")
-        
-        total_inscriptos = df_inscripciones[col_dni_ins].nunique() if col_dni_ins else 0
-        docentes_asistieron_al_menos_una = df_asistencia[col_dni_as].nunique() if col_dni_as else 0
-        
-        dnis_asistieron = set(df_asistencia[col_dni_as].unique()) if col_dni_as else set()
-        df_no_asistieron_nunca = df_inscripciones[~df_inscripciones[col_dni_ins].isin(dnis_asistieron)] if col_dni_ins else pd.DataFrame()
-        total_no_asistieron = df_no_asistieron_nunca[col_dni_ins].nunique() if col_dni_ins else 0
-
-        kpi1, kpi2, kpi3 = st.columns(3)
-        with kpi1:
-            st.metric(label="👤 Total Docentes Inscriptos", value=f"{total_inscriptos:,}")
-        with kpi2:
-            pct_al_menos_una = (docentes_asistieron_al_menos_una / total_inscriptos * 100) if total_inscriptos > 0 else 0
-            st.metric(label="✅ Asistieron Al Menos Una Vez", value=f"{docentes_asistieron_al_menos_una:,} ({pct_al_menos_una:.1f}%)")
-        with kpi3:
-            pct_no_asistieron = (total_no_asistieron / total_inscriptos * 100) if total_inscriptos > 0 else 0
-            st.metric(label="🚨 No Asistieron Nunca", value=f"{total_no_asistieron:,} ({pct_no_asistieron:.1f}%)")
-
-        st.write("---")
-
-        # --- 2) ANÁLISIS DE PRESENTISMO DIARIO ---
-        st.write("### 📅 Porcentaje de Asistencia Diaria (Por Fecha Convocada)")
-        if col_fecha_as and col_dni_as and col_esc_as and col_esc_ins:
-            registros_fecha = []
-            fechas_unicas = sorted(df_asistencia[col_fecha_as].unique())
+        if col_dni_ins:
+            df_inscripciones[col_dni_ins] = df_inscripciones[col_dni_ins].astype(str).str.strip()
+            total_inscriptos = df_inscripciones[col_dni_ins].nunique()
+            pct_real = (docentes_activos_hoja / total_inscriptos * 100) if total_inscriptos > 0 else 0
             
-            for fecha in fechas_unicas:
-                df_asistentes_dia = df_asistencia[df_asistencia[col_fecha_as] == fecha]
-                asistentes_reales = df_asistentes_dia[col_dni_as].nunique()
-                escuelas_convocadas_dia = df_asistentes_dia[col_esc_as].unique()
-                
-                total_debieron_asistir = df_inscripciones[df_inscripciones[col_esc_ins].isin(escuelas_convocadas_dia)][col_dni_ins].nunique() if col_dni_ins else 0
-                porcentaje_diario = (asistentes_reales / total_debieron_asistir * 100) if total_debieron_asistir > 0 else 0
-                
-                registros_fecha.append({
-                    "Fecha": fecha,
-                    "Asistieron Reales": asistentes_reales,
-                    "Debían Asistir (Escuelas Convocadas)": total_debieron_asistir,
-                    "% Asistencia Diaria": porcentaje_diario
-                })
-                
-            df_presentismo_diario = pd.DataFrame(registros_fecha)
-            promedio_asistencia_total = df_presentismo_diario['% Asistencia Diaria'].mean()
+            st.write("### 📈 Curva y Porcentajes Reales de Presentismo")
             
-            c_graf, c_tab = st.columns()
-            with c_graf:
-                fig_diario = px.line(df_presentismo_diario, x='Fecha', y='% Asistencia Diaria',
-                                     title="Evolución del Presentismo Real por Fecha de Encuentro",
-                                     markers=True, labels={'% Asistencia Diaria': '% de Presentismo'})
-                st.plotly_chart(fig_diario, use_container_width=True)
+            # Bloque Resaltado de Inscritos
+            st.markdown(f"""
+                <div class="kpi-container" style="border-left-color: #7c3aed; text-align: left; max-width: 400px; margin-bottom: 20px;">
+                    <div class="kpi-title">📋 Población Total de Inscriptos</div>
+                    <div class="kpi-value">{total_inscriptos:,}</div>
+                    <div class="kpi-sub" style="color: #7c3aed;">El {pct_real:.1f}% del total asistió al menos una vez</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Gráfico de líneas temporales de asistencia diaria
+            if col_fecha_as and col_esc_as and col_esc_ins:
+                registros_fecha = []
+                fechas_unicas = sorted(df_asistencia[col_fecha_as].unique())
                 
-            with c_tab:
-                st.markdown(f"**Promedio de Asistencia Total del Curso:** `{promedio_asistencia_total:.2f}%`")
+                for f in fechas_unicas:
+                    df_f = df_asistencia[df_asistencia[col_fecha_as] == f]
+                    asistieron = df_f[col_dni_as].nunique() if col_dni_as else 0
+                    escuelas_hoy = df_f[col_esc_as].unique()
+                    
+                    debieron_asistir = df_inscripciones[df_inscripciones[col_esc_ins].isin(escuelas_hoy)][col_dni_ins].nunique()
+                    pct_dia = (asistieron / debieron_asistir * 100) if debieron_asistir > 0 else 0
+                    
+                    registros_fecha.append({"Fecha": f, "% Asistencia": round(pct_dia, 1)})
+                
+                df_p_diario = pd.DataFrame(registros_fecha)
+                
+                # Gráfico interactivo moderno
+                fig_linea = px.line(df_p_diario, x='Fecha', y='% Asistencia', 
+                                     title="📈 Evolución de Asistencia Diaria por Encuentro (Sobre Escuelas Convocadas)",
+                                     text='% Asistencia', markers=True, template="plotly_white")
+                fig_linea.update_traces(line_color='#2563eb', line_width=3, marker=dict(size=8))
+                fig_linea.update_layout(title_font_size=16, title_x=0.5)
+                fig_linea.update_yaxes(suffix="%", range=[0, 105])
+                
+                g_col, t_col = st.columns([2, 1])
+                with g_col:
+                    st.plotly_chart(fig_linea, use_container_width=True)
+                with t_col:
+                    st.write("#### 📋 Promedio General")
+                    st.markdown(f"""
+                        <div class="kpi-container" style="border-left-color: #3b82f6; background-color:#eff6ff;">
+                            <div class="kpi-title">Asistencia Promedio Total</div>
+                            <div class="kpi-value">{df_p_diario['% Asistencia'].mean():.2f}%</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+    # --- 3) SECCIÓN DE GRÁFICOS CREATIVOS E INTERACTIVOS ---
+    st.write("### 🎨 Análisis Visual de Variables y Categorías")
+    
+    v_col1, v_col2 = st.columns(2)
+    
+    with v_col1:
+        if col_dep:
+
