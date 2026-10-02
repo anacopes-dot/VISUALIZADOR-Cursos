@@ -49,7 +49,7 @@ st.markdown("""
         margin-bottom: 15px;
     }
     </style>
-""", unsafe_unsafe_with_html=True)
+""", unsafe_allow_html=True)
 
 st.title("📊 Tablero Ejecutivo de Control y Presentismo Docente")
 
@@ -66,15 +66,21 @@ df_asistencia, df_inscripciones, df_escuelas = None, None, None
 # Lectura robusta tolerante a nombres de pestañas
 if file_as:
     try: df_asistencia = pd.read_excel(file_as, sheet_name="Asistencias")
-    except: df_asistencia = pd.read_excel(file_as, sheet_name=0)
+    except:
+        try: df_asistencia = pd.read_excel(file_as, sheet_name=0)
+        except: pass
 if file_ins:
     try: df_inscripciones = pd.read_excel(file_ins, sheet_name="Inscriptos")
-    except: df_inscripciones = pd.read_excel(file_ins, sheet_name=0)
+    except:
+        try: df_inscripciones = pd.read_excel(file_ins, sheet_name=0)
+        except: pass
 if file_esc:
     try: df_escuelas = pd.read_excel(file_esc, sheet_name="Escuelas")
-    except: df_escuelas = pd.read_excel(file_esc, sheet_name=0)
+    except:
+        try: df_escuelas = pd.read_excel(file_esc, sheet_name=0)
+        except: pass
 
-# --- DETECTOR INTELIGENTE DE COLUMNAS ---
+# --- FUNCIÓN DETECTOR INTELIGENTE DE COLUMNAS ---
 def mapear_columna(df_cols, posibles_nombres):
     for nombre in posibles_nombres:
         for c in df_cols:
@@ -182,9 +188,8 @@ if df_asistencia is not None:
                                      text='% Asistencia', markers=True, template="plotly_white")
                 fig_linea.update_traces(line_color='#2563eb', line_width=3, marker=dict(size=8))
                 fig_linea.update_layout(title_font_size=16, title_x=0.5)
-                fig_linea.update_yaxes(suffix="%", range=[0, 105])
                 
-                g_col, t_col = st.columns([2, 1])
+                g_col, t_col = st.columns()
                 with g_col:
                     st.plotly_chart(fig_linea, use_container_width=True)
                 with t_col:
